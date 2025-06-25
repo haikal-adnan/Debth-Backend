@@ -37,7 +37,7 @@ app.get("/patients", async (req, res) => {
 
 // Endpoint dasar
 app.get("/hello", (req, res) => {
-  res.json({ message: "Hello from Node.js API!" });
+  res.json({ message: "Woeeee" });
 });
 
 app.listen(PORT, () => {
