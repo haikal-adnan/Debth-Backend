@@ -1,8 +1,9 @@
+require("dotenv").config();
+
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-require("dotenv").config();
 
 const pool = require("./db"); // PostgreSQL connection
 
