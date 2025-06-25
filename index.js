@@ -21,6 +21,8 @@ app.use((req, res, next) => {
   if (token !== API_KEY) {
     return res.status(401).json({ error: "Unauthorized" });
   }
+  console.log("Incoming request:", req.method, req.url);
+  console.log("x-api-key:", req.headers['x-api-key']);
   next();
 });
 
@@ -36,18 +38,9 @@ app.get("/patients", async (req, res) => {
 });
 
 // Endpoint dasar
-function apiKeyMiddleware(req, res, next) {
-  const key = req.headers['x-api-key'];
-  if (key !== API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
-
-app.get('/hello', apiKeyMiddleware, (req, res) => {
-  res.json({ message: 'Hello secured world!' });
+app.get("/hello", (req, res) => {
+  res.json({ message: "Bolehh" });
 });
-
 
 app.listen(PORT, () => {
   console.log(`API running at http://localhost:${PORT}`);
