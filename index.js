@@ -36,9 +36,18 @@ app.get("/patients", async (req, res) => {
 });
 
 // Endpoint dasar
-app.get("/hello", (req, res) => {
-  res.json({ message: "Woeeee" });
+function apiKeyMiddleware(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (key !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+app.get('/hello', apiKeyMiddleware, (req, res) => {
+  res.json({ message: 'Hello secured world!' });
 });
+
 
 app.listen(PORT, () => {
   console.log(`API running at http://localhost:${PORT}`);
