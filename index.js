@@ -16,6 +16,8 @@ const API_KEY = process.env.API_KEY;
 
 // Cek API_KEY wajib
 if (!API_KEY) {
+  console.log("🌍 ENV Variables:");
+  console.log(process.env);
   console.error("❌ ERROR: API_KEY is not set in environment.");
   console.error("📌 Pastikan API_KEY ditambahkan di Railway → Settings → Variables");
   process.exit(1);
