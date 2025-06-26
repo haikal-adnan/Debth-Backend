@@ -45,12 +45,12 @@ app.get("/hello", (req, res) => {
 
 // Daftar pengguna
 app.post("/register", async (req, res) => {
-  const { username, email, password } = req.body;
+  const { email, password } = req.body;
   try {
     const hashed = await bcrypt.hash(password, 10);
     await pool.query(
-      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
-      [username, email, hashed]
+      "INSERT INTO users (email, password) VALUES ($1, $2)",
+      [email, hashed]
     );
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
