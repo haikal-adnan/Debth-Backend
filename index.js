@@ -52,16 +52,26 @@ app.post("/register", async (req, res) => {
       "INSERT INTO users (email, password) VALUES ($1, $2)",
       [email, hashed]
     );
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({
+      error: false,
+      message: "User registered successfully"
+    });
   } catch (err) {
     if (err.code === "23505") {
-      res.status(409).json({ error: "Username or email already exists" });
+      res.status(409).json({
+        error: true,
+        message: "Email already exists"
+      });
     } else {
       console.error(err);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({
+        error: true,
+        message: "Internal Server Error"
+      });
     }
   }
 });
+
 
 // Login
 app.post("/login", async (req, res) => {
