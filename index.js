@@ -26,6 +26,7 @@ if (!API_KEY) {
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Middleware untuk validasi API Key
 app.use((req, res, next) => {
@@ -46,6 +47,15 @@ app.get("/hello", (req, res) => {
 // Daftar pengguna
 app.post("/register", async (req, res) => {
   const { email, password } = req.body;
+
+  // Validasi input
+  if (!email || !password) {
+    return res.status(400).json({
+      error: true,
+      message: "Email and password are required"
+    });
+  }
+
   try {
     const hashed = await bcrypt.hash(password, 10);
     await pool.query(
@@ -71,6 +81,7 @@ app.post("/register", async (req, res) => {
     }
   }
 });
+
 
 
 // Login
