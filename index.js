@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 if (process.env.NODE_ENV !== "production") {
   // Hanya di lokal
@@ -87,15 +88,41 @@ app.post("/register", async (req, res) => {
 // Login
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-    if (result.rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
-    res.json({ message: "Login successful", user: { id: user.id, username: user.username, email: user.email } });
+    if (!match) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Buat payload dan token
+    const payload = {
+      id: user.id,
+      email: user.email
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "default_secret_key", {
+      expiresIn: "1d"
+    });
+
+    // Hanya kirim id dan token
+    res.json({
+      error: false,
+      message: "Login successful",
+      loginResult: {
+        userId: user.id,
+        token: token
+      }
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
