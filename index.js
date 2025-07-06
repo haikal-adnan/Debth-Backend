@@ -49,7 +49,6 @@ app.get("/hello", (req, res) => {
 app.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
-  // Validasi input
   if (!email || !password) {
     return res.status(400).json({
       error: true,
@@ -83,9 +82,11 @@ app.post("/register", async (req, res) => {
   }
 });
 
+app.post('/ext', (req, res) => {
+    console.log('Session Data Received:', req.body);
+    res.status(200).json({ message: 'Session saved successfully!' });
+});
 
-
-// Login
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -103,7 +104,6 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Buat payload dan token
     const payload = {
       id: user.id,
       email: user.email
@@ -113,7 +113,6 @@ app.post("/login", async (req, res) => {
       expiresIn: "1d"
     });
 
-    // Hanya kirim id dan token
     res.json({
       error: false,
       message: "Login successful",
