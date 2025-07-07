@@ -15,6 +15,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
 // Cek API_KEY wajib
 if (!API_KEY) {
   console.log("🌍 ENV Variables:");
@@ -24,10 +30,6 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Middleware untuk validasi API Key
 app.use((req, res, next) => {
@@ -44,6 +46,9 @@ app.use((req, res, next) => {
 app.get("/hello", (req, res) => {
   res.json({ message: "Bolehh" });
 });
+
+
+
 
 // Daftar pengguna
 app.post("/register", async (req, res) => {
@@ -82,10 +87,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post('/ext', (req, res) => {
-    console.log('Session Data Received:', req.body);
-    res.status(200).json({ message: 'Session saved successfully!' });
-});
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -125,6 +126,48 @@ app.post("/login", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Menyimpan data aktivitas pengguna
+app.post("/activity", async (req, res) => {
+  const { user_id, session_start, session_end, keystrokes_count, file_switch_count, average_file_focus_seconds } = req.body;
+
+  if (!user_id || !session_start || !session_end) {
+    return res.status(400).json({
+      error: true,
+      message: "user_id, session_start, and session_end are required"
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO user_activity 
+      (user_id, session_start, session_end, keystrokes_count, file_switch_count, average_file_focus_seconds)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+
+    const values = [
+      user_id,
+      session_start,
+      session_end,
+      keystrokes_count || null,
+      file_switch_count || null,
+      average_file_focus_seconds || null
+    ];
+
+    await pool.query(query, values);
+
+    res.status(201).json({
+      error: false,
+      message: "Activity data saved successfully"
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error"
+    });
   }
 });
 
