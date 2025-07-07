@@ -147,7 +147,7 @@ app.post("/project", async (req, res) => {
 
     if (result.rows.length > 0) {
       return res.status(200).json({
-        project_id: result.rows[0].project_id,
+        record_id: result.rows[0].record_id,
         project_structure: result.rows[0].project_structure
       });
     }
@@ -187,9 +187,10 @@ app.post("/project", async (req, res) => {
     );
 
     res.status(201).json({
-      project_id: insertResult.rows[0].project_id,
+      record_id: insertResult.rows[0].record_id, // <== gunakan ini
       project_structure: insertResult.rows[0].project_structure
     });
+
 
   } catch (err) {
     console.error(err);
