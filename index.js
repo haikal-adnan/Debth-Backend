@@ -129,39 +129,70 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Menyimpan data aktivitas pengguna
-app.post("/activity", async (req, res) => {
-  const { user_id, session_start, session_end, keystrokes_count, file_switch_count, average_file_focus_seconds } = req.body;
+// Cek atau buat project baru dan auto-create user_activity jika belum ada
+app.post("/project", async (req, res) => {
+  const { project_path, user_id } = req.body;
 
-  if (!user_id || !session_start || !session_end) {
+  if (!project_path || !user_id) {
     return res.status(400).json({
       error: true,
-      message: "user_id, session_start, and session_end are required"
+      message: "project_path and user_id are required"
     });
   }
 
   try {
-    const query = `
-      INSERT INTO user_activity 
-      (user_id, session_start, session_end, keystrokes_count, file_switch_count, average_file_focus_seconds)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `;
+    // 1. Cek apakah project sudah ada
+    const result = await pool.query(
+      "SELECT * FROM activity_record WHERE project_id = $1",
+      [project_path]
+    );
 
-    const values = [
-      user_id,
-      session_start,
-      session_end,
-      keystrokes_count || null,
-      file_switch_count || null,
-      average_file_focus_seconds || null
-    ];
+    if (result.rows.length > 0) {
+      return res.status(200).json({
+        project_id: result.rows[0].project_id,
+        project_structure: result.rows[0].project_structure
+      });
+    }
 
-    await pool.query(query, values);
+    // 2. Cek apakah user_activity sudah ada
+    const activityResult = await pool.query(
+      "SELECT * FROM user_activity WHERE user_id = $1",
+      [user_id]
+    );
+
+    // 3. Kalau user_activity belum ada → buatkan
+    if (activityResult.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO user_activity (user_id, activity_file_ids, last_update)
+         VALUES ($1, $2, NOW())`,
+        [user_id, []]
+      );
+    }
+
+    // 4. Buat project baru
+    const project_structure = { project_name: project_path, folders: [] };
+
+    const insertResult = await pool.query(
+      `INSERT INTO activity_record (project_id, project_structure)
+       VALUES ($1, $2) RETURNING record_id, project_id, project_structure`,
+      [project_path, project_structure]
+    );
+
+    const newRecordId = insertResult.rows[0].record_id;
+
+    // 5. Masukkan record_id ke activity_file_ids
+    await pool.query(
+      `UPDATE user_activity
+       SET activity_file_ids = array_append(activity_file_ids, $1), last_update = NOW()
+       WHERE user_id = $2`,
+      [newRecordId, user_id]
+    );
 
     res.status(201).json({
-      error: false,
-      message: "Activity data saved successfully"
+      project_id: insertResult.rows[0].project_id,
+      project_structure: insertResult.rows[0].project_structure
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -171,7 +202,34 @@ app.post("/activity", async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ API running at http://localhost:${PORT}`);
+
+// Update project structure
+app.put("/project/:projectId", async (req, res) => {
+  const { projectId } = req.params;
+  const { project_structure } = req.body;
+
+  if (!project_structure) {
+    return res.status(400).json({
+      error: true,
+      message: "project_structure is required"
+    });
+  }
+
+  try {
+    await pool.query(
+      `UPDATE activity_record SET project_structure = $1 WHERE project_id = $2`,
+      [project_structure, projectId]
+    );
+
+    res.status(200).json({
+      error: false,
+      message: "Project structure updated successfully"
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error"
+    });
+  }
 });
