@@ -129,7 +129,7 @@ app.post("/login", async (req, res) => {
 
 // Cek atau buat project baru dan auto-create user_activity jika belum ada
 app.post("/project", async (req, res) => {
-  const { project_path, user_id } = req.body;
+  const { project_path, user_id, initial_structure } = req.body;
 
   if (!project_path || !user_id) {
     return res.status(400).json({
@@ -168,7 +168,7 @@ app.post("/project", async (req, res) => {
     }
 
     // 4. Buat project baru
-    const project_structure = { project_name: project_path, folders: [] };
+    const project_structure = initial_structure || { project_name: project_path, folders: [] };
 
     const insertResult = await pool.query(
       `INSERT INTO activity_record (project_id, project_structure)
