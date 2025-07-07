@@ -204,7 +204,7 @@ app.post("/project", async (req, res) => {
 
 // Update project structure
 app.put("/project/:projectId", async (req, res) => {
-  const { projectId } = req.params;
+  const { projectId } = req.params; // Ini adalah record_id (UUID)
   const { project_structure } = req.body;
 
   if (!project_structure) {
@@ -216,7 +216,7 @@ app.put("/project/:projectId", async (req, res) => {
 
   try {
     await pool.query(
-      `UPDATE activity_record SET project_structure = $1 WHERE project_id = $2`,
+      `UPDATE activity_record SET project_structure = $1 WHERE record_id = $2`,
       [project_structure, projectId]
     );
 
@@ -231,10 +231,4 @@ app.put("/project/:projectId", async (req, res) => {
       message: "Internal Server Error"
     });
   }
-});
-
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ API running at http://localhost:${PORT}`);
 });
