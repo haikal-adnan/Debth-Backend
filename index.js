@@ -126,8 +126,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-// Cek atau buat project baru dan auto-create user_activity jika belum ada
 app.post("/project", async (req, res) => {
   const { project_path, user_id, initial_structure } = req.body;
 
@@ -158,12 +156,27 @@ app.post("/project", async (req, res) => {
       [user_id]
     );
 
-    // 3. Kalau user_activity belum ada → buatkan
+    // 3. Kalau user_activity belum ada → buatkan dengan default values
     if (activityResult.rows.length === 0) {
       await pool.query(
-        `INSERT INTO user_activity (user_id, activity_file_ids, last_update)
-         VALUES ($1, $2, NOW())`,
-        [user_id, []]
+        `INSERT INTO user_activity (
+          user_id,
+          activity_file_ids,
+          is_online,
+          is_on_vsc,
+          focus_duration_vsc,
+          total_duration_vsc,
+          last_update
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          user_id,
+          [],          // activity_file_ids kosong
+          0,           // is_online: false → gunakan float 0
+          0,           // is_on_vsc: 0
+          0,           // focus_duration_vsc: 0
+          0            // total_duration_vsc: 0
+        ]
       );
     }
 
@@ -178,7 +191,7 @@ app.post("/project", async (req, res) => {
 
     const newRecordId = insertResult.rows[0].record_id;
 
-    // 5. Masukkan record_id ke activity_file_ids
+    // 5. Tambahkan record_id ke activity_file_ids
     await pool.query(
       `UPDATE user_activity
        SET activity_file_ids = array_append(activity_file_ids, $1), last_update = NOW()
@@ -187,10 +200,9 @@ app.post("/project", async (req, res) => {
     );
 
     res.status(201).json({
-      record_id: insertResult.rows[0].record_id, // <== gunakan ini
+      record_id: insertResult.rows[0].record_id,
       project_structure: insertResult.rows[0].project_structure
     });
-
 
   } catch (err) {
     console.error(err);
@@ -233,9 +245,23 @@ app.put("/project/:projectId", async (req, res) => {
   }
 });
 
-
-
 // Start server
 app.listen(PORT, () => {
   console.log(`✅ API running at http://localhost:${PORT}`);
 });
+
+setInterval(async () => {
+  try {
+    const result = await pool.query(`
+      UPDATE user_activity
+      SET is_online = 0,
+          is_on_vsc = 0
+      WHERE last_update < NOW() - INTERVAL '30 seconds'
+    `);
+    if (result.rowCount > 0) {
+      console.log(`[Auto-Reset] ${result.rowCount} user_activity set to offline`);
+    }
+  } catch (err) {
+    console.error("[Auto-Reset Error]", err);
+  }
+}, 10_000); // Cek setiap 10 detik
