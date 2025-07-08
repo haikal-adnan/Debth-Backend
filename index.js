@@ -245,6 +245,46 @@ app.put("/project/:projectId", async (req, res) => {
   }
 });
 
+app.put("/activity", async (req, res) => {
+  const { user_id, is_online, is_on_vsc, focus_duration_vsc, total_duration_vsc } = req.body;
+
+  if (!user_id) {
+    return res.status(400).json({
+      error: true,
+      message: "user_id is required"
+    });
+  }
+
+  try {
+    await pool.query(
+      `UPDATE user_activity
+       SET
+         is_online = $1,
+         is_on_vsc = $2,
+         focus_duration_vsc = $3,
+         total_duration_vsc = $4,
+         last_update = NOW()
+       WHERE user_id = $5`,
+      [
+        is_online,
+        is_on_vsc,
+        focus_duration_vsc,
+        total_duration_vsc,
+        user_id
+      ]
+    );
+
+    res.status(200).json({ message: "User activity updated" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error"
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`✅ API running at http://localhost:${PORT}`);
