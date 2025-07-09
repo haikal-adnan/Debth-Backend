@@ -327,11 +327,15 @@ app.get("/summary/activity", authenticate, async (req, res) => {
       [fileIds]
     );
 
-    const projects = projectResult.rows.map((row) => ({
-      project_id: row.project_id,
-      project_name: row.project_structure.project_name || row.project_id,
-      record_id: row.record_id
-    }));
+    const projects = projectResult.rows.map((row) => {
+      const pathParts = row.project_id.split("\\");
+      const lastSegment = pathParts[pathParts.length - 1];
+      return {
+        project_id: row.project_id,
+        project_name: lastSegment,
+        record_id: row.record_id
+      };
+    });
 
     const activity_context = {
       activity_file_ids: activity.activity_file_ids,
@@ -405,14 +409,15 @@ app.get("/summary/project/:recordId", authenticate, async (req, res) => {
       total_focus_duration: total_all_duration - total_idle_duration
     };
 
-    res.json({ project_id, project_name: project_structure.project_name, summary, files });
+    const pathParts = project_id.split("\\");
+    const lastSegment = pathParts[pathParts.length - 1];
+
+    res.json({ project_id, project_name: lastSegment, summary, files });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
 
 // Start server
 app.listen(PORT, () => {
