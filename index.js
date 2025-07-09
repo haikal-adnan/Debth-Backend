@@ -304,6 +304,7 @@ app.put("/activity", async (req, res) => {
 
 
 
+
 // GET /summary/activity → List project dan activity_context
 app.get("/summary/activity", authenticate, async (req, res) => {
   try {
@@ -328,7 +329,8 @@ app.get("/summary/activity", authenticate, async (req, res) => {
 
     const projects = projectResult.rows.map((row) => ({
       project_id: row.project_id,
-      project_name: row.project_structure.project_name || row.project_id
+      project_name: row.project_structure.project_name || row.project_id,
+      record_id: row.record_id
     }));
 
     const activity_context = {
@@ -346,14 +348,14 @@ app.get("/summary/activity", authenticate, async (req, res) => {
   }
 });
 
-// GET /summary/project/:projectId → Detail struktur + summary
-app.get("/summary/project/:projectId", authenticate, async (req, res) => {
-  const { projectId } = req.params;
+// GET /summary/project/:recordId → Detail struktur + summary
+app.get("/summary/project/:recordId", authenticate, async (req, res) => {
+  const { recordId } = req.params;
 
   try {
     const result = await pool.query(
-      `SELECT * FROM activity_record WHERE project_id = $1`,
-      [projectId]
+      `SELECT * FROM activity_record WHERE record_id = $1`,
+      [recordId]
     );
 
     if (result.rows.length === 0) {
