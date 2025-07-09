@@ -15,6 +15,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 
+const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Token required" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret_key");
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -284,6 +301,116 @@ app.put("/activity", async (req, res) => {
     });
   }
 });
+
+
+
+// GET /summary/activity → List project dan activity_context
+app.get("/summary/activity", authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const userActivityRes = await pool.query(
+      `SELECT * FROM user_activity WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (userActivityRes.rows.length === 0) {
+      return res.status(404).json({ error: "No activity found" });
+    }
+
+    const activity = userActivityRes.rows[0];
+    const fileIds = activity.activity_file_ids;
+
+    const projectResult = await pool.query(
+      `SELECT record_id, project_id, project_structure FROM activity_record WHERE record_id = ANY($1)`,
+      [fileIds]
+    );
+
+    const projects = projectResult.rows.map((row) => ({
+      project_id: row.project_id,
+      project_name: row.project_structure.project_name || row.project_id
+    }));
+
+    const activity_context = {
+      activity_file_ids: activity.activity_file_ids,
+      is_online: !!activity.is_online,
+      is_on_vsc: !!activity.is_on_vsc,
+      focus_duration_vsc: activity.focus_duration_vsc,
+      total_duration_vsc: activity.total_duration_vsc
+    };
+
+    res.json({ projects, activity_context });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /summary/project/:projectId → Detail struktur + summary
+app.get("/summary/project/:projectId", authenticate, async (req, res) => {
+  const { projectId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT * FROM activity_record WHERE project_id = $1`,
+      [projectId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const { project_structure, project_id } = result.rows[0];
+    const files = [];
+    let total_keystrokes_count = 0;
+    let total_file_switch_count = 0;
+    let total_idle_duration = 0;
+    let total_all_duration = 0;
+
+    const traverse = (folders, parentPath = "") => {
+      folders.forEach((folder) => {
+        const currentPath = parentPath ? `${parentPath}/${folder.folder_name}` : folder.folder_name;
+
+        folder.files.forEach((file) => {
+          files.push({
+            file_name: file.file_name,
+            folder_path: currentPath,
+            idle_duration: file.idle_duration,
+            total_duration: file.total_duration,
+            keystrokes_count: file.keystrokes_count,
+            file_switch_count: file.file_switch_count
+          });
+
+          total_keystrokes_count += file.keystrokes_count;
+          total_file_switch_count += file.file_switch_count;
+          total_idle_duration += file.idle_duration;
+          total_all_duration += file.total_duration;
+        });
+
+        if (folder.folders && folder.folders.length > 0) {
+          traverse(folder.folders, currentPath);
+        }
+      });
+    };
+
+    traverse(project_structure.folders);
+
+    const summary = {
+      total_keystrokes_count,
+      total_file_switch_count,
+      total_idle_duration,
+      total_all_duration,
+      total_focus_duration: total_all_duration - total_idle_duration
+    };
+
+    res.json({ project_id, project_name: project_structure.project_name, summary, files });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 
 // Start server
 app.listen(PORT, () => {
