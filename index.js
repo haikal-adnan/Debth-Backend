@@ -316,7 +316,7 @@ app.get("/summary/activity", authenticate, async (req, res) => {
     );
 
     if (userActivityRes.rows.length === 0) {
-      return res.status(404).json({ error: "No activity found" });
+      return res.status(404).json({ error: true, message: "No activity found" });
     }
 
     const activity = userActivityRes.rows[0];
@@ -345,12 +345,18 @@ app.get("/summary/activity", authenticate, async (req, res) => {
       total_duration_vsc: activity.total_duration_vsc
     };
 
-    res.json({ projects, activity_context });
+    res.json({
+      error: false,
+      message: "Data Loaded Success",
+      projects,
+      activity_context
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: true, message: "Internal Server Error" });
   }
 });
+
 
 // GET /summary/project/:recordId → Detail struktur + summary
 app.get("/summary/project/:recordId", authenticate, async (req, res) => {
