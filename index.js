@@ -1,4 +1,5 @@
 const express = require("express");
+const app = express();
 const helmet = require("helmet");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -10,7 +11,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const pool = require("./db");
-const app = express();
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
@@ -425,10 +425,10 @@ app.get("/summary/project/:recordId", authenticate, async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ API running at http://localhost:${PORT}`);
-});
+// // Start server
+// app.listen(PORT, () => {
+//   console.log(`✅ API running at http://localhost:${PORT}`);
+// });
 
 setInterval(async () => {
   try {
@@ -445,3 +445,5 @@ setInterval(async () => {
     console.error("[Auto-Reset Error]", err);
   }
 }, 10_000); // Cek setiap 10 detik
+
+module.exports = app;
